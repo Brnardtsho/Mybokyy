@@ -13,34 +13,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Extract Zip and move files to root
-      run: |
-        if ls *.zip 1> /dev/null 2>&1; then
-          echo "Unzipping archive..."
-          unzip -o *.zip -d temp_extracted
-          # Find where gradlew is located and move everything from that directory to root
-          GRADLEW_PATH=$(find temp_extracted -name gradlew)
-          if [ -n "$GRADLEW_PATH" ]; then
-            PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-            cp -rn "$PROJECT_DIR"/* .
-          fi
-          rm -rf temp_extracted
-        fi
-
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+    - name: Extract Zip Archive
+      run: |
+        unzip -o *.zip
+        # Move extracted files from subfolder to root if necessary
+        GRADLEW_FILE=$(find . -maxdepth 3 -name "gradlew" | head -n 1)
+        if [ -n "$GRADLEW_FILE" ]; then
+          DIR=$(dirname "$GRADLEW_FILE")
+          if [ "$DIR" != "." ]; then
+            cp -r $DIR/* .
+          fi
+        fi
+        chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: "**/build/outputs/apk/debug/*.apk"
