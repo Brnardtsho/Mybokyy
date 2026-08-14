@@ -13,13 +13,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Unzip project files
+    - name: Extract Zip and move files to root
       run: |
         if ls *.zip 1> /dev/null 2>&1; then
-          unzip -o *.zip
-          if [ -d "مدونتي" ]; then
-            cp -r مدونتي/* . || true
+          echo "Unzipping archive..."
+          unzip -o *.zip -d temp_extracted
+          # Find where gradlew is located and move everything from that directory to root
+          GRADLEW_PATH=$(find temp_extracted -name gradlew)
+          if [ -n "$GRADLEW_PATH" ]; then
+            PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+            cp -rn "$PROJECT_DIR"/* .
           fi
+          rm -rf temp_extracted
         fi
 
     - name: Set up JDK 17
@@ -28,11 +33,8 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
     - name: Make gradlew executable
-      run: chmod +x gradlew || true
+      run: chmod +x gradlew
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug
